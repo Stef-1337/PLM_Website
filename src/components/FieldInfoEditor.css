@@ -1,0 +1,92 @@
+.app {
+    /* Ensure .app has relative positioning for z-index to work */
+    position: relative;
+  }
+  
+  .popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+  z-index: 999; /* Ensure it sits below the popup */
+}
+
+  .popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%; /* Adjust width as needed */
+    height: 80%; /* Adjust height as needed */
+    background-color: white;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000; /* Ensure it sits above the overlay */
+    overflow-y: auto; /* Enable scrolling if content overflows */
+  }
+  
+  .popup-inner {
+    padding: 20px;
+    box-sizing: border-box;
+    height: 100%; /* Ensure inner content takes full height */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .popup h2 {
+    margin-top: 0;
+  }
+
+  .close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 0 10px; /* Add padding to create space around the header */
+    background-color: white; /* Ensure header background matches the popup background */
+    border-bottom: 1px solid #ccc; /* Add a border at the bottom of the header */
+  }
+
+  .field-info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  /* Styling for table header */
+  .field-info-table th {
+    background-color: #f2f2f2;
+    color: #333;
+    font-weight: bold;
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #ddd;
+  }
+  
+  /* Styling for table rows */
+  .field-info-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+  }
+  
+  /* Styling for odd rows */
+  .field-info-table tbody tr:nth-child(odd) {
+    background-color: #f9f9f9;
+  }
+  
+  /* Styling for table header text */
+  .field-info-table th,
+  .field-info-table td {
+    font-size: 14px;
+  }
