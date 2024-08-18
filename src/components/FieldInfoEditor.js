@@ -89,6 +89,7 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
     const cropSummary = {};
 
     fieldInfoList.forEach(info => {
+      const farmName = info.farm_name || 'Unbekannt'; // Replace null with 'unbekannt'
       if (!cropSummary[info.farm_name]) {
         cropSummary[info.farm_name] = {};
       }
@@ -96,7 +97,7 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
       if (!cropSummary[info.farm_name][info.crop_name]) {
         cropSummary[info.farm_name][info.crop_name] = {
           crop_name: info.crop_name,
-          farm_name: info.farm_name,
+          farm_name: farmName,
           totalFields: 0,
           totalArea: 0,
         };
@@ -136,12 +137,27 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
   const cropSummaries = getCropSummaries(filteredFieldInfoList);
 
   const groupedByFarm = cropSummaries.reduce((acc, summary) => {
-    if (!acc[summary.farm_name]) {
-      acc[summary.farm_name] = [];
+    const farmName = summary.farm_name || 'unbekannt'; // Replace null with 'unbekannt'
+
+    if (!acc[farmName]) {
+      acc[farmName] = {
+        totalArea: 0,
+        crops: []
+      };
     }
-    acc[summary.farm_name].push(`${summary.crop_name} (${summary.totalFields}x) - ${summary.totalArea.toFixed(2)} ha`);
+
+    acc[farmName].totalArea += summary.totalArea;
+    acc[farmName].crops.push(`${summary.crop_name} (${summary.totalFields}x) - ${summary.totalArea.toFixed(2)} ha`);
+
     return acc;
   }, {});
+
+  // Convert groupedByFarm to an array for rendering
+  const farmSummaryList = Object.entries(groupedByFarm).map(([farmName, { totalArea, crops }]) => ({
+    farmName,
+    totalArea: totalArea.toFixed(2),
+    crops
+  }));
 
 
   const handleEdit = (info) => {
@@ -411,10 +427,10 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
             <div className="field-info-table-container">
               <h2>Vorhandene Kulturen</h2>
               <>
-                {Object.entries(groupedByFarm).map(([farmName, crops], index) => (
+                {farmSummaryList.map((farm, index) => (
                   <div key={index}>
-                    <h3>{farmName}</h3>
-                    {crops.map((crop, idx) => (
+                    <h3>{farm.farmName} ({farm.totalArea} ha)</h3>
+                    {farm.crops.map((crop, idx) => (
                       <p key={idx}>{crop}</p>
                     ))}
                   </div>
