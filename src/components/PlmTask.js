@@ -79,6 +79,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
     { value: 'vehicle', label: 'Fahrzeug' },
     { value: 'attachment', label: 'Anbaugerät' },
     { value: 'size', label: 'Größe' },
+    { value: 'performance', label: 'Flächenleistung' }
   ];
 
   useEffect(() => {
@@ -213,6 +214,12 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
           return sortOrder === 'asc' ? (a.attachment?.name || '').localeCompare(b.attachment?.name || '') : (b.attachment?.name || '').localeCompare(a.attachment?.name || '');
         case 'size':
           return sortOrder === 'asc' ? a.field.size - b.field.size : b.field.size - a.field.size;
+        case 'performance':
+          const unknown = sortOrder === 'desc' ? -1 : Infinity;
+          const aPerformance = (a.field.size != null && a.field.size !== 0) ? ((a.field.size) / (a.duration / 3600)) : unknown;
+          const bPerformance = (b.field.size != null && b.field.size !== 0) ? ((b.field.size) / (b.duration / 3600)) : unknown;
+
+          return sortOrder === 'asc' ? aPerformance-bPerformance : bPerformance-aPerformance;
         default:
           return 0;
       }
@@ -289,7 +296,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
 
       if (selectedFarmIds.length === 0 || selectedFarmIds.includes('*')) {
         setSelectedFarms(farmOptions.map(option => option.value));
-        setFilteredFieldOptions(fieldOptions); 
+        setFilteredFieldOptions(fieldOptions);
       } else {
         setSelectedFarms(selectedFarmIds);
 
