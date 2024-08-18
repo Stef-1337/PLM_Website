@@ -33,6 +33,9 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
 
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [currentSortCriteria, setCurrentSortCriteria] = useState('year');
+
   const fetchFieldInfoList = async () => {
     try {
       const response = await fetch('http://stef.local:3000/plm_fieldinfo');
@@ -42,9 +45,13 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
       const data = await response.json();
 
       data.sort((a, b) => {
-        if (a.field_name < b.field_name) return -1;
-        if (a.field_name > b.field_name) return 1;
-        return b.year - a.year;
+        if (a.year > b.year) return -1;
+        if (a.year < b.year) return 1;
+
+        const cropComparison = a.crop_name.localeCompare(b.crop_name);
+        if (cropComparison !== 0) return cropComparison;
+
+        return a.field_name.localeCompare(b.field_name);
       });
 
       setFieldInfoList(data);
@@ -56,6 +63,7 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
   useEffect(() => {
     fetchFieldInfoList();
   }, []);
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -87,16 +95,16 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
 
   const handleSave = async (event) => {
     event.preventDefault(); // Prevents default form submission
-  
+
     const payload = {
       fields: selectedFields.map(f => f.value),
       begin: fieldInfo.begin,
       year: fieldInfo.year,
       cropId: fieldInfo.cropId,
     };
-  
+
     console.log('Payload:', payload);
-  
+
     try {
       let response;
       if (fieldInfo.isEditing) {
@@ -116,15 +124,15 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
           body: JSON.stringify(payload),
         });
       }
-  
+
       if (!response.ok) {
         const errorMessage = await response.text();
         throw new Error(fieldInfo.isEditing ? `Failed to update field info: ${errorMessage}` : `Failed to add field info: ${errorMessage}`);
       }
-  
+
       console.log(fieldInfo.isEditing ? 'Field info updated successfully' : 'Field info added successfully');
       fetchFieldInfoList();
-  
+
       setFieldInfo(initialFieldInfoState);
       setSelectedFields([]);
       setIsAddingNew(false);
@@ -190,6 +198,39 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
   const handleClose = () => {
     onClose();
     window.location.reload();
+  };
+
+  const sortFieldInfo = (criteria, order = sortOrder) => {
+    setCurrentSortCriteria(criteria);
+  
+    const sortedList = [...fieldInfoList].sort((a, b) => {
+      if (criteria === 'year') {
+        return order === 'asc' ? a.year - b.year : b.year - a.year;
+      } else if (criteria === 'name') {
+        const nameComparison = order === 'desc'
+          ? a.field_name.localeCompare(b.field_name)
+          : b.field_name.localeCompare(a.field_name);
+  
+        if (nameComparison !== 0) return nameComparison;
+  
+        return b.year - a.year;
+      }
+  
+      const cropComparison = a.crop_name.localeCompare(b.crop_name);
+      if (cropComparison !== 0) return cropComparison;
+  
+      return a.field_name.localeCompare(b.field_name);
+    });
+  
+    setFieldInfoList(sortedList);
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder((prevOrder) => {
+      const newOrder = prevOrder === 'asc' ? 'desc' : 'asc';
+      sortFieldInfo(currentSortCriteria, newOrder);
+      return newOrder;
+    });
   };
 
   return (
@@ -287,6 +328,16 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
             <br />
             <div className="field-info-table-container">
               <h2>Vorhandene Erntejahre</h2>
+              <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
+                <label>Sortieren nach: </label>
+                <select onChange={(e) => sortFieldInfo(e.target.value)} style={{ marginLeft: '10px' }}>
+                  <option value="year">Erntejahr</option>
+                  <option value="name">Name</option>
+                </select>
+                <button onClick={toggleSortOrder} style={{ marginLeft: '10px' }}>
+                  {sortOrder === 'asc' ? 'Aufsteigend' : 'Absteigend'}
+                </button>
+              </div>
               <table className="field-info-table">
                 <thead>
                   <tr>
