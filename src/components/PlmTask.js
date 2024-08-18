@@ -125,10 +125,12 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
           label: item.name,
           farmId: item.farmId
         }));
-        const cropOptions = cropsData.map(item => ({
-          value: item.crop_id,
-          label: item.name
-        }));
+        const cropOptions = cropsData
+          .map(item => ({
+            value: item.crop_id,
+            label: item.name
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label));
         const harvestYearOptions = yearsData.map(year => ({
           value: year.year,
           label: year.year.toString()
@@ -219,7 +221,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
           const aPerformance = (a.field.size != null && a.field.size !== 0) ? ((a.field.size) / (a.duration / 3600)) : unknown;
           const bPerformance = (b.field.size != null && b.field.size !== 0) ? ((b.field.size) / (b.duration / 3600)) : unknown;
 
-          return sortOrder === 'asc' ? aPerformance-bPerformance : bPerformance-aPerformance;
+          return sortOrder === 'asc' ? aPerformance - bPerformance : bPerformance - aPerformance;
         default:
           return 0;
       }
