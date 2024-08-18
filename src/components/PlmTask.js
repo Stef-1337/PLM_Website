@@ -38,14 +38,19 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
   const [vehicles, setVehicles] = useState([]);// eslint-disable-next-line
   const [attachments, setAttachments] = useState([]);// eslint-disable-next-line
   const [fields, setFields] = useState([]);
+  const [filteredFieldOptions, setFilteredFieldOptions] = useState([]);
+  // eslint-disable-next-line
+  const [farms, setFarms] = useState([]);
   const [sortOption, setSortOption] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedVehicles, setSelectedVehicles] = useState([]);
   const [selectedAttachments, setSelectedAttachments] = useState([]);
   const [selectedFields, setSelectedFields] = useState([]);
+  const [selectedFarms, setSelectedFarms] = useState([]);
   const [vehicleOptions, setVehicleOptions] = useState([]);
   const [attachmentOptions, setAttachmentOptions] = useState([]);
   const [fieldOptions, setFieldOptions] = useState([]);
+  const [farmOptions, setFarmOptions] = useState([]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,6 +64,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
   const [vehicleMenuIsOpen, setVehicleMenuIsOpen] = useState(false);
   const [attachmentMenuIsOpen, setAttachmentMenuIsOpen] = useState(false);
   const [fieldMenuIsOpen, setFieldMenuIsOpen] = useState(false);
+  const [farmMenuIsOpen, setFarmMenuIsOpen] = useState(false);
   const [harvestYearMenuIsOpen, setHarvestYearMenuIsOpen] = useState(false);
   const [cropMenuIsOpen, setCropMenuIsOpen] = useState(false);
 
@@ -79,7 +85,8 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
     const fetchData = async () => {
       try {
         const url = 'http://stef.local:3000/';
-        const [fieldsData, vehiclesData, attachmentsData, tasksData, cropsData, yearsData] = await Promise.all([
+        const [farmData, fieldsData, vehiclesData, attachmentsData, tasksData, cropsData, yearsData] = await Promise.all([
+          fetch(url + 'plm_farms').then(res => res.json()),
           fetch(url + 'plm_fields').then(res => res.json()),
           fetch(url + 'plm_vehicles').then(res => res.json()),
           fetch(url + 'plm_attachments').then(res => res.json()),
@@ -93,12 +100,17 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
         attachmentsData.sort((a, b) => a.name.localeCompare(b.name));
         yearsData.sort((a, b) => b.year - a.year);
 
+        setFarms(farmData);
         setFields(fieldsData);
         setVehicles(vehiclesData);
         setAttachments(attachmentsData);
         setSelectedCrops(cropsData);
         setSelectedHarvestYears(yearsData);
 
+        const farmOptions = farmData.map(item => ({
+          value: item.id,
+          label: item.name
+        }))
         const vehicleOptions = vehiclesData.map(item => ({
           value: item.id,
           label: item.name
@@ -109,7 +121,8 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
         }));
         const fieldOptions = fieldsData.map(item => ({
           value: item.id,
-          label: item.name
+          label: item.name,
+          farmId: item.farmId
         }));
         const cropOptions = cropsData.map(item => ({
           value: item.crop_id,
@@ -120,9 +133,11 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
           label: year.year.toString()
         }));
 
+        setFarmOptions(farmOptions);
         setVehicleOptions(vehicleOptions);
         setAttachmentOptions(attachmentOptions);
         setFieldOptions(fieldOptions);
+        setFilteredFieldOptions(fieldOptions);
         setCropOptions(cropOptions);
         setHarvestYearOptions(harvestYearOptions);
 
@@ -177,7 +192,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
   useEffect(() => {
     sortAndFilterTasks();
     // eslint-disable-next-line
-  }, [sortOption, sortOrder, selectedVehicles, selectedAttachments, selectedFields, selectedHarvestYears, selectedCrops, startDate, endDate, tasks, searchQuery]);
+  }, [sortOption, sortOrder, selectedFarms, selectedVehicles, selectedAttachments, selectedFields, selectedHarvestYears, selectedCrops, startDate, endDate, tasks, searchQuery]);
 
   const sortAndFilterTasks = () => {
     sortedTasks.sort((a, b) => {
@@ -204,6 +219,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
     });
 
     const filteredTasks = sortedTasks.filter(task =>
+      (selectedFarms.length === 0 || selectedFarms.includes(task.field.farmId)) &&
       (selectedVehicles.length === 0 || selectedVehicles.includes(task.vehicles_id)) &&
       (selectedAttachments.length === 0 || selectedAttachments.includes(task.attachments_id)) &&
       (selectedFields.length === 0 || selectedFields.includes(task.fields_id)) &&
@@ -212,7 +228,6 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
       (!startDate || task.beginDate >= startDate) &&
       (!endDate || task.beginDate <= endDate) &&
       (!searchQuery || task.description.toLowerCase().includes(searchQuery.toLowerCase()))
-
     );
 
     setFilteredTasks(filteredTasks);
@@ -261,6 +276,28 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
       setAttachmentMenuIsOpen(true);
     } else {
       setAttachmentMenuIsOpen(false);
+    }
+  };
+
+  const handleFarmChange = (selectedOptions) => {
+    if (!selectedOptions || selectedOptions.length === 0) {
+      setSelectedFarms([]);
+      setFilteredFieldOptions(fieldOptions);
+      setFarmMenuIsOpen(false);
+    } else {
+      const selectedFarmIds = selectedOptions ? selectedOptions.map(option => option.value) : [];
+
+      if (selectedFarmIds.length === 0 || selectedFarmIds.includes('*')) {
+        setSelectedFarms(farmOptions.map(option => option.value));
+        setFilteredFieldOptions(fieldOptions); 
+      } else {
+        setSelectedFarms(selectedFarmIds);
+
+        const filteredFields = fieldOptions.filter(field => selectedFarmIds.includes(field.farmId));
+        setFilteredFieldOptions(filteredFields);
+      }
+
+      setFarmMenuIsOpen(selectedFarmIds.length > 0);
     }
   };
 
@@ -325,7 +362,6 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
 
   const handleTaskClick = (task) => {
     setSelectedTask(task);
-    console.log("now checking ", task);
     setShowTaskDetails(true);
   };
 
@@ -449,7 +485,6 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
       uniqueFieldNames.add(task.field.name);
       return total + task.field.size;
     }
-    console.log("added fields: ", uniqueFieldNames);
     return total;
   }, 0);
 
@@ -638,19 +673,29 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
           />
         </div>
         <div>
-        <Select
+          <Select
+            value={isSelectAllSelected(selectedFarms) ? [SelectAllOption, ...farmOptions] : farmOptions.filter(option => selectedFarms.includes(option.value))}
+            isMulti
+            name="farms"
+            options={[SelectAllOption, ...farmOptions]}
+            className="basic-multi-select"
+            classNamePrefix="select"
+            onChange={handleFarmChange}
             styles={selectStyle}
             placeholder="Alle Betriebe"
-            options={[SelectAllOption, ..."TODO"]}
+            components={{ Option: SelectAllCheckbox }}
+            isSearchable={false}
+            menuIsOpen={farmMenuIsOpen}
+            onMenuClose={() => setFarmMenuIsOpen(false)}
+            onMenuOpen={() => setFarmMenuIsOpen(true)}
           />
-            {/*TODO load all farms and make this sortable MAYBE only show fields for selected farms??*/}
         </div>
         <div>
           <Select
             value={isSelectAllSelected(selectedFields) ? [SelectAllOption, ...fieldOptions] : fieldOptions.filter(option => selectedFields.includes(option.value))}
             isMulti
             name="fields"
-            options={[SelectAllOption, ...fieldOptions]}
+            options={[SelectAllOption, ...filteredFieldOptions]}
             className="basic-multi-select"
             classNamePrefix="select"
             onChange={handleFieldChange}
