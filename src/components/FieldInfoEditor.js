@@ -86,6 +86,7 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
   const handleEdit = (info) => {
     setFieldInfo({
       ...info,
+      id: info.id,
       begin: new Date(info.begin_date).toISOString().slice(0, 16),
       isEditing: true,
     });
@@ -95,20 +96,23 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
 
   const handleSave = async (event) => {
     event.preventDefault(); // Prevents default form submission
-
+  
+    console.log("sending ", selectedFields);
     const payload = {
       fields: selectedFields.map(f => f.value),
       begin: fieldInfo.begin,
       year: fieldInfo.year,
       cropId: fieldInfo.cropId,
+      taskInfoId: fieldInfo.id,
     };
-
+  
     console.log('Payload:', payload);
-
+  
     try {
       let response;
       if (fieldInfo.isEditing) {
-        response = await fetch(`http://stef.local:3000/plm_fieldinfo/${fieldInfo.id}`, {
+        console.log(fieldInfo.id, " is edited");
+          response = await fetch(`http://stef.local:3000/plm_fieldinfo/${fieldInfo.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -124,15 +128,15 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
           body: JSON.stringify(payload),
         });
       }
-
+  
       if (!response.ok) {
         const errorMessage = await response.text();
         throw new Error(fieldInfo.isEditing ? `Failed to update field info: ${errorMessage}` : `Failed to add field info: ${errorMessage}`);
       }
-
+  
       console.log(fieldInfo.isEditing ? 'Field info updated successfully' : 'Field info added successfully');
       fetchFieldInfoList();
-
+  
       setFieldInfo(initialFieldInfoState);
       setSelectedFields([]);
       setIsAddingNew(false);
@@ -264,6 +268,7 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
                   onMenuClose={() => setFieldMenuIsOpen(false)}
                   onMenuOpen={() => setFieldMenuIsOpen(true)}
                   required
+                  isDisabled={fieldInfo.isEditing}
                 />
               </div>
             </label>
@@ -284,8 +289,9 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
               <select
                 name="year"
                 value={fieldInfo.year}
-                onChange={handleInputChange}
+                onChange={fieldInfo.isEditing ? null : handleInputChange}
                 required
+                disabled={fieldInfo.isEditing}
               >
                 {years.map((year) => (
                   <option key={year} value={year}>
@@ -341,20 +347,23 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
               <table className="field-info-table">
                 <thead>
                   <tr>
-                    <th>Felder</th>
                     <th>Jahr</th>
-                    <th>Start</th>
                     <th>Frucht</th>
+                    <th>Feld</th>
+                    <th>Fläche</th>
+                    <th>Start</th>
                     <th>Aktionen</th>
                   </tr>
                 </thead>
                 <tbody>
                   {fieldInfoList.map((info) => (
                     <tr key={info.id}>
-                      <td>{info.field_name}</td>
                       <td>{info.year}</td>
+                      <td>{info.crop_name}</td>
+                      <td>{info.field_name}</td>
+                      <td>{info.field_size} ha</td>
                       <td>{new Date(info.begin_date).toLocaleString()}</td>
-                      <td>{info.crop_name}</td><td>
+                      <td>
                         <button onClick={() => handleEdit(info)}>Bearbeiten</button>
                         {confirmingDeleteId === info.id ? (
                           <button

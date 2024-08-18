@@ -638,6 +638,14 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
           />
         </div>
         <div>
+        <Select
+            styles={selectStyle}
+            placeholder="Alle Betriebe"
+            options={[SelectAllOption, ..."TODO"]}
+          />
+            {/*TODO load all farms and make this sortable MAYBE only show fields for selected farms??*/}
+        </div>
+        <div>
           <Select
             value={isSelectAllSelected(selectedFields) ? [SelectAllOption, ...fieldOptions] : fieldOptions.filter(option => selectedFields.includes(option.value))}
             isMulti
@@ -660,6 +668,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
         <thead>
           <tr>
             <th>ID</th>
+            <th>Betrieb</th>
             <th>Erntejahr</th>
             <th>Frucht</th>
             <th>Feld</th>
@@ -677,6 +686,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
           {filteredTasks.map(task => (
             <tr key={task.id}>
               <td onClick={() => handleTaskClick(task)} style={{ cursor: 'pointer' }}>{task.id}</td>
+              <td>{task.field.farmId ? task.field.farmName : '-'}</td>
               <td>{task.year ? task.year : '-'}</td>
               <td>{task.field_info ? task.field_info.crop_name : '-'}</td>
               <td>{task.field ? task.field.name : 'Error'}</td>
