@@ -90,3 +90,23 @@
   .field-info-table td {
     font-size: 14px;
   }
+
+  .farm-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  .farm-summary-table th, .farm-summary-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  
+  .farm-summary-table th {
+    background-color: #f4f4f4;
+  }
+  
+  .farm-summary-table td {
+    background-color: #fff;
+  }

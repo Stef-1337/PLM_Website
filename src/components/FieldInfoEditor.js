@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import './FieldInfoEditor.css';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) => {
 
@@ -158,6 +160,7 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
     totalArea: totalArea.toFixed(2),
     crops
   }));
+
 
 
   const handleEdit = (info) => {
@@ -318,6 +321,62 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
     setSelectedYear(Number(e.target.value));
   };
 
+  const exportToPDF = () => {
+    const container = document.querySelector('.field-info-table-container'); // The container to capture
+  
+    // Define column indices for "Start" and "Aktionen"
+    const startColumnIndex = 6; // Adjust the index as needed (1-based)
+    const actionsColumnIndex = 7; // Adjust the index as needed (1-based)
+  
+    // Select column headers and cells to hide
+    const startColumnHeader = document.querySelector(`.field-info-table thead th:nth-child(${startColumnIndex})`);
+    const actionsColumnHeader = document.querySelector(`.field-info-table thead th:nth-child(${actionsColumnIndex})`);
+  
+    const startColumnCells = document.querySelectorAll(`.field-info-table tbody tr td:nth-child(${startColumnIndex})`);
+    const actionsColumnCells = document.querySelectorAll(`.field-info-table tbody tr td:nth-child(${actionsColumnIndex})`);
+  
+    if (container) {
+      // Hide the "Start" and "Aktionen" columns
+      if (startColumnHeader) startColumnHeader.style.display = 'none';
+      if (actionsColumnHeader) actionsColumnHeader.style.display = 'none';
+      startColumnCells.forEach(cell => cell.style.display = 'none');
+      actionsColumnCells.forEach(cell => cell.style.display = 'none');
+  
+      html2canvas(container, { useCORS: true }).then((canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210; // Width of A4 in mm
+        const pageHeight = 295; // Height of A4 in mm
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        let heightLeft = imgHeight;
+  
+        let position = 0;
+  
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+  
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+  
+        pdf.save('field_info_summary.pdf');
+  
+        // Restore the "Start" and "Aktionen" columns
+        if (startColumnHeader) startColumnHeader.style.display = '';
+        if (actionsColumnHeader) actionsColumnHeader.style.display = '';
+        startColumnCells.forEach(cell => cell.style.display = '');
+        actionsColumnCells.forEach(cell => cell.style.display = '');
+      }).catch((error) => {
+        console.error('Error generating PDF:', error);
+      });
+    } else {
+      console.error('Element not found');
+    }
+  };
+
   return (
     <div className="popup">
       <div className="popup-inner">
@@ -421,21 +480,56 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
                 ))}
               </select>
 
-              <button style={{ marginLeft: 'auto' }}> {/*TODO*/}Exportieren</button>
+              <button onClick={exportToPDF} style={{ marginLeft: 'auto' }}> {/*TODO*/}Exportieren</button>
             </div>
             <br />
             <div className="field-info-table-container">
-              <h2>Vorhandene Kulturen</h2>
-              <>
-                {farmSummaryList.map((farm, index) => (
-                  <div key={index}>
-                    <h3>{farm.farmName} ({farm.totalArea} ha)</h3>
-                    {farm.crops.map((crop, idx) => (
-                      <p key={idx}>{crop}</p>
+              <h2>Vorhandene Kulturen - {selectedYear}</h2>
+              <table className="farm-summary-table">
+                <thead>
+                  <tr>
+                    <th>Frucht</th>
+                    {farmSummaryList.map((farm) => (
+                      <th key={farm.farmName}>{farm.farmName}</th>
                     ))}
-                  </div>
-                ))}
-              </>
+                    <th>Summe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {farmSummaryList.length > 0 ? (
+                    // Collect all unique crops to display in rows
+                    Array.from(new Set(farmSummaryList.flatMap(farm => farm.crops.map(crop => crop.split(' ')[0])))).map((cropName, idx) => {
+                      const cropTotal = farmSummaryList.reduce((sum, farm) => {
+                        const crop = farm.crops.find(crop => crop.startsWith(cropName));
+                        return sum + (crop ? parseFloat(crop.split(' - ')[1].replace(' ha', '')) : 0);
+                      }, 0);
+
+                      return (
+                        <tr key={idx}>
+                          <td>{cropName}</td>
+                          {farmSummaryList.map((farm) => {
+                            const crop = farm.crops.find(crop => crop.startsWith(cropName));
+                            return <td key={farm.farmName}>{crop ? crop.split(' - ')[1] : '-'}</td>;
+                          })}
+                          <td>{cropTotal.toFixed(2)} ha</td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={farmSummaryList.length + 2}>Keine Daten verfügbar</td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td><strong>Gesamtfläche</strong></td>
+                    {farmSummaryList.map((farm) => {
+                      const farmTotal = farm.crops.reduce((sum, crop) => sum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0);
+                      return <td key={farm.farmName}><strong>{farmTotal.toFixed(2)} ha</strong></td>;
+                    })}
+                    <td><strong>{farmSummaryList.reduce((sum, farm) => sum + farm.crops.reduce((subSum, crop) => subSum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0), 0).toFixed(2)} ha</strong></td>
+                  </tr>
+                </tbody>
+              </table>
               {/*
               <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center' }}>
                 <label>Sortieren nach: </label>
@@ -493,6 +587,7 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
       </div>
     </div>
   );
+  
 };
 
 export default FieldInfoEditor;
