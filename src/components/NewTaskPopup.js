@@ -18,10 +18,48 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
     vehicle: '',
     attachment: '',
     description: '',
-    duration: '',
+    duration: 0, // Duration in seconds
     begin: getCurrentDateTime(),
     end: getCurrentDateTime()
   });
+
+  const durationOptions = [
+    '00:00', '00:15', '00:30', '00:45',
+    '01:00', '01:15', '01:30', '01:45',
+    '02:00', '02:15', '02:30', '02:45',
+    '03:00', '03:15', '03:30', '03:45',
+    '04:00', '04:15', '04:30', '04:45',
+    '05:00', '05:15', '05:30', '05:45',
+    '06:00', '06:15', '06:30', '06:45',
+    '07:00', '07:15', '07:30', '07:45',
+    '08:00', '08:15', '08:30', '08:45',
+    '09:00', '09:15', '09:30', '09:45',
+    '10:00', '10:15', '10:30', '10:45',
+    '11:00', '11:15', '11:30', '11:45',
+    '12:00', '12:15', '12:30', '12:45',
+    '13:00', '13:15', '13:30', '13:45',
+    '14:00', '14:15', '14:30', '14:45',
+    '15:00', '15:15', '15:30', '15:45',
+    '16:00', '16:15', '16:30', '16:45',
+    '17:00', '17:15', '17:30', '17:45',
+    '18:00', '18:15', '18:30', '18:45',
+    '19:00', '19:15', '19:30', '19:45',
+    '20:00', '20:15', '20:30', '20:45',
+    '21:00', '21:15', '21:30', '21:45',
+    '22:00', '22:15', '22:30', '22:45',
+    '23:00', '23:15', '23:30', '23:45'
+  ];
+
+  const durationToSeconds = (duration) => {
+    const [hours, minutes] = duration.split(':').map(Number);
+    return (hours * 3600) + (minutes * 60);
+  };
+
+  const secondsToDuration = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,13 +69,20 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
     }));
   };
 
+  const handleDurationChange = (e) => {
+    const { value } = e.target;
+    setTaskData(prevData => ({
+      ...prevData,
+      duration: durationToSeconds(value) // Convert selected duration to seconds
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const formatDateForMySQL = (date) => {
       if (!date) return null;
       const d = new Date(date);
-      //TODO submit data
       return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
     };
 
@@ -45,17 +90,26 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
     const formattedEnd = formatDateForMySQL(taskData.end);
 
     try {
-      const response = await fetch(`/plm_task_create?fields_id=${taskData.field}&vehicles_id=${taskData.vehicle}&attachments_id=${taskData.attachment}&description=${encodeURIComponent(taskData.description)}&duration=${taskData.duration}&begin=${formattedBegin}&end=${formattedEnd}`, {
+      const response = await fetch('http://stef.local:3000/plm_task_insert', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fields_id: taskData.field,
+          vehicles_id: taskData.vehicle,
+          attachments_id: taskData.attachment,
+          description: taskData.description,
+          duration: taskData.duration, // Duration in seconds
+          begin: formattedBegin,
+          end: formattedEnd,
+        }),
       });
 
       if (response.ok) {
         console.log('Task created successfully');
         await onAddTask();
-        onClose();
+        // Do not close the popup here
       } else {
         console.error('Error creating task');
       }
@@ -102,7 +156,11 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
           </div>
           <div className="form-group">
             <label htmlFor="duration">Dauer:</label>
-            <input type="text" id="duration" name="duration" value={taskData.duration} onChange={handleChange} />
+            <select id="duration" name="duration" value={secondsToDuration(taskData.duration)} onChange={handleDurationChange}>
+              {durationOptions.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           </div>
           <div className="form-group">
             <label htmlFor="begin">Datum:</label>
@@ -116,7 +174,6 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
       </form>
     </div>
   );
-
 };
 
 export default NewTaskPopup;

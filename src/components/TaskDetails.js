@@ -4,6 +4,8 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 const TaskDetails = ({ task, onClose, onRefreshTasks, FieldOptions, VehicleOptions, AttachmentOptions }) => {
   const taskDetailsRef = useRef(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showConfirmPopup, setShowConfirmPopup] = useState(false); // State for confirmation popup
   const [taskData, setTaskData] = useState({
     id: task.id,
     field: task.field,
@@ -19,9 +21,8 @@ const TaskDetails = ({ task, onClose, onRefreshTasks, FieldOptions, VehicleOptio
   const durationInSeconds = taskData.duration || 0;
   const hours = Math.floor(durationInSeconds / 3600);
   const minutes = Math.floor((durationInSeconds % 3600) / 60);
-  const [selectedDuration, setSelectedDuration] = React.useState(new Date(0, 0, 0, hours, minutes));
-
-  const [selectedDate, setSelectedDate] = React.useState(new Date(taskData.beginDate));
+  const [selectedDuration, setSelectedDuration] = useState(new Date(0, 0, 0, hours, minutes));
+  const [selectedDate, setSelectedDate] = useState(new Date(taskData.beginDate));
 
   const handleFieldChange = (e) => {
     const selectedFieldId = e.target.value;
@@ -29,21 +30,20 @@ const TaskDetails = ({ task, onClose, onRefreshTasks, FieldOptions, VehicleOptio
   };
 
   const handleVehicleChange = (e) => {
-    console.log(AttachmentOptions);
     const selectedVehicleId = e.target.value;
     handleChange({ target: { name: 'vehicle', value: { id: selectedVehicleId } } });
-  }
+  };
 
   const handleAttachmentChange = (e) => {
     const selectedAttachmentId = e.target.value;
     handleChange({ target: { name: 'attachment', value: { id: selectedAttachmentId } } });
-  }
+  };
 
   const handleDurationChange = (time) => {
     setSelectedDuration(time);
     const newHours = time.getHours();
     const newMinutes = time.getMinutes();
-    const totalSeconds = newHours * 3600 + newMinutes * 60; // Convert hours and minutes to total seconds
+    const totalSeconds = newHours * 3600 + newMinutes * 60;
     handleChange({ target: { name: 'duration', value: totalSeconds } });
   };
 
@@ -55,6 +55,7 @@ const TaskDetails = ({ task, onClose, onRefreshTasks, FieldOptions, VehicleOptio
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (taskDetailsRef.current && !taskDetailsRef.current.contains(event.target)) {
+        setShowConfirmPopup(false); // Close confirmation popup if clicked outside
         onClose();
       }
     };
@@ -93,6 +94,37 @@ const TaskDetails = ({ task, onClose, onRefreshTasks, FieldOptions, VehicleOptio
     } catch (error) {
       console.error('Error updating task:', error);
     }
+  };
+
+  const handleDeleteTask = async () => {
+    try {
+      const response = await fetch(`http://stef.local:3000/plm_task_drop?task_id=${taskData.id}`, {
+        method: 'GET',
+      });
+
+      if (response.ok) {
+        console.log('Task deleted successfully');
+        await onRefreshTasks();
+        onClose();
+      } else {
+        console.error('Error deleting task');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setShowConfirmPopup(true); // Show confirmation popup
+  };
+
+  const handleConfirmDelete = async () => {
+    await handleDeleteTask();
+    setShowConfirmPopup(false); // Close popup after deletion
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirmPopup(false); // Close popup without deletion
   };
 
   return (
@@ -158,9 +190,38 @@ const TaskDetails = ({ task, onClose, onRefreshTasks, FieldOptions, VehicleOptio
             timeCaption="Time"
           />
         </div>
-        <button type="submit">Speichern</button>
-        <button type="button" onClick={onClose}>Zurück</button>
+        <div style={{ marginTop: '25px' }}>
+          <button type="submit">Speichern</button>
+          <button type="button" onClick={onClose}>Zurück</button>
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={handleDeleteClick}
+            style={{
+              backgroundColor: 'red',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              cursor: 'pointer',
+              marginTop: '20px',
+            }}
+          >
+            Löschen
+          </button>
+        </div>
       </form>
+      
+      {showConfirmPopup && (
+        <div className="confirmation-popup">
+          <div className="confirmation-content">
+            <p>Wollen sie diesen Auftrag wirklich löschen?</p>
+            <button onClick={handleConfirmDelete} style={{ backgroundColor: 'darkred', color: 'white', border: 'none', padding: '10px 20px', cursor: 'pointer', marginRight: '10px' }}>Bestätigen</button>
+            <button onClick={handleCancelDelete} style={{ backgroundColor: 'grey', color: 'white', border: 'none', padding: '10px 20px', cursor: 'pointer' }}>Abbrechen</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

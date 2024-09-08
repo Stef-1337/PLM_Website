@@ -237,7 +237,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
   }, [sortOption, sortOrder, selectedFarms, selectedVehicles, selectedAttachments, selectedFields, selectedHarvestYears, selectedCrops, startDate, endDate, tasks, searchQuery]);
 
   const handleAddTask = () => {
-    console.log("TODO add task");
+    refreshTasks();
   }
 
   const sortAndFilterTasks = () => {
