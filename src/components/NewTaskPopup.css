@@ -1,0 +1,40 @@
+
+.popup-container {
+  position: relative; /* Adjust from fixed to relative */
+  background-color: #fff;
+  padding: 20px; /* Adjust padding as needed */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  width: 500px; /* Set desired width */
+  max-width: 90%; /* Ensure responsiveness */
+  height: auto; /* Let height adjust naturally */
+  min-height: 70%;
+  max-height: 90vh; /* Limit height to prevent overflow */
+  overflow-y: auto; /* Add scrolling if content overflows */
+  border-radius: 8px; /* Add border-radius for rounded corners */
+  box-sizing: border-box;
+  transform: translate(-50%, -50%); /* Centering */
+}
+
+.form-group {
+  margin-bottom: 15px; /* Space between form elements */
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px; /* Slightly larger padding for better UX */
+  box-sizing: border-box; /* Ensures padding is inside the element's width */
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}

@@ -7,6 +7,7 @@ import DarkModeToggle from './DarkModeToggle';
 import SaveDropdown from './SaveDropdown';
 import TaskDetails from './TaskDetails';
 import FieldInfoEditor from './FieldInfoEditor';
+import NewTaskPopup from './NewTaskPopup';
 
 import './PlmTask.css';
 
@@ -55,6 +56,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
   const [endDate, setEndDate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showTaskDetails, setShowTaskDetails] = useState(false);
+  const [showNewTaskPopup, setShowNewTaskPopup] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedHarvestYears, setSelectedHarvestYears] = useState([]);
   const [selectedCrops, setSelectedCrops] = useState([]);
@@ -83,6 +85,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
   ];
 
   useEffect(() => {
+
     const fetchData = async () => {
       try {
         const url = 'http://stef.local:3000/';
@@ -185,6 +188,42 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
     fetchData();
   }, []);
 
+  const refreshTasks = async () => {
+    try {
+      const url = 'http://stef.local:3000/';
+      const [tasksData] = await Promise.all([
+        fetch(url + 'plm_tasks_matched').then(res => res.json())
+      ]);
+
+      const allVehicleIds = vehicleOptions.map(option => option.value);
+
+      const updatedTasks = tasksData
+        .filter(task => allVehicleIds.length === 0 || allVehicleIds.includes(task.vehicles_id))
+        .map(task => ({
+          ...task,
+          field: fields.find(field => field.id === task.fields_id),
+          vehicle: vehicles.find(vehicle => vehicle.id === task.vehicles_id),
+          attachment: attachments.find(attachment => attachment.id === task.attachments_id),
+          beginDate: adjustToTimezone(new Date(task.begin)),
+          endDate: adjustToTimezone(new Date(task.end)),
+          field_info: task.field_info_id ? {
+            field_id: task.field_id,
+            begin: task.field_info_begin,
+            year: task.year,
+            crop_id: task.crop_id,
+            crop_name: task.crop_name
+          } : null
+        }))
+        .sort((a, b) => new Date(b.beginDate) - new Date(a.beginDate));
+
+      setTasks(updatedTasks);
+      setFilteredTasks(updatedTasks);
+      setSortedTasks(updatedTasks);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
+
   const adjustToTimezone = (date, timezoneOffset) => {
     const localTime = date.getTime();
     const localOffset = date.getTimezoneOffset() * 60000;
@@ -196,6 +235,10 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
     sortAndFilterTasks();
     // eslint-disable-next-line
   }, [sortOption, sortOrder, selectedFarms, selectedVehicles, selectedAttachments, selectedFields, selectedHarvestYears, selectedCrops, startDate, endDate, tasks, searchQuery]);
+
+  const handleAddTask = () => {
+    console.log("TODO add task");
+  }
 
   const sortAndFilterTasks = () => {
     sortedTasks.sort((a, b) => {
@@ -388,6 +431,14 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
     //fetchData();
   }
 
+  const openNewTaskPopup = () => {
+    setShowNewTaskPopup(true);
+  };
+
+  const closeNewTaskPopup = () => {
+    setShowNewTaskPopup(false);
+  };
+
   const selectStyle = {
     control: (base, state) => ({
       ...base,
@@ -506,6 +557,7 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
       <div className='top-left-corner'>
         <DarkModeToggle darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
         <button onClick={togglePopup}>Field Editor</button>
+        <button onClick={openNewTaskPopup}>Neuer Auftrag..</button>
         {showInfoEditor && (
           <>
             <div className="popup-overlay" onClick={closePopup}></div>
@@ -772,9 +824,19 @@ const PlmTask = ({ darkMode, toggleDarkMode }) => {
       {showTaskDetails && selectedTask && (
         <div className="modal">
           <div className="modal-content">
-            <TaskDetails task={selectedTask} onClose={handleCloseDetails} />
+            <TaskDetails task={selectedTask} onClose={handleCloseDetails} onRefreshTasks={refreshTasks} FieldOptions={fieldOptions} VehicleOptions={vehicleOptions} AttachmentOptions={attachmentOptions} />
           </div>
         </div>
+      )}
+
+
+      {showNewTaskPopup && (
+        <>
+          <div className="popup-overlay" onClick={closeNewTaskPopup}></div>
+          <div className="popup-container">
+            <NewTaskPopup onClose={closeNewTaskPopup} onAddTask={handleAddTask} fields={fields} attachments={attachments} vehicles={vehicles} />
+          </div>
+        </>
       )}
     </div>
   );

@@ -322,13 +322,11 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
   };
 
   const exportToPDF = () => {
-    const container = document.querySelector('.field-info-table-container'); // The container to capture
+    const container = document.querySelector('.field-info-table-container'); 
   
-    // Define column indices for "Start" and "Aktionen"
-    const startColumnIndex = 6; // Adjust the index as needed (1-based)
-    const actionsColumnIndex = 7; // Adjust the index as needed (1-based)
+    const startColumnIndex = 6; 
+    const actionsColumnIndex = 7;
   
-    // Select column headers and cells to hide
     const startColumnHeader = document.querySelector(`.field-info-table thead th:nth-child(${startColumnIndex})`);
     const actionsColumnHeader = document.querySelector(`.field-info-table thead th:nth-child(${actionsColumnIndex})`);
   
@@ -336,7 +334,6 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
     const actionsColumnCells = document.querySelectorAll(`.field-info-table tbody tr td:nth-child(${actionsColumnIndex})`);
   
     if (container) {
-      // Hide the "Start" and "Aktionen" columns
       if (startColumnHeader) startColumnHeader.style.display = 'none';
       if (actionsColumnHeader) actionsColumnHeader.style.display = 'none';
       startColumnCells.forEach(cell => cell.style.display = 'none');
@@ -345,8 +342,8 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
       html2canvas(container, { useCORS: true }).then((canvas) => {
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgWidth = 210; // Width of A4 in mm
-        const pageHeight = 295; // Height of A4 in mm
+        const imgWidth = 210; 
+        const pageHeight = 295; 
         const imgHeight = canvas.height * imgWidth / canvas.width;
         let heightLeft = imgHeight;
   
@@ -364,7 +361,6 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
   
         pdf.save('field_info_summary.pdf');
   
-        // Restore the "Start" and "Aktionen" columns
         if (startColumnHeader) startColumnHeader.style.display = '';
         if (actionsColumnHeader) actionsColumnHeader.style.display = '';
         startColumnCells.forEach(cell => cell.style.display = '');
