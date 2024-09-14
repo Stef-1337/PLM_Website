@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import './FieldInfoEditor.css';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 
 const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) => {
@@ -321,6 +322,411 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
     setSelectedYear(Number(e.target.value));
   };
 
+  //TODO show a row for each field in the detailed table
+  const exportToPDF = () => {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    let yPos = 10; // Starting Y position for text
+    
+    // Add a title to the PDF
+    pdf.setFontSize(16);
+    pdf.text('Field Info Summary', 10, yPos);
+    
+    yPos += 10; // Adjust position for summary table
+    
+    // Set table headers for the summary
+    const headers = ['Frucht', ...farmSummaryList.map(farm => farm.farmName), 'Summe'];
+    const rows = [];
+    
+    // Collect table rows (crops by farms and total area)
+    Array.from(new Set(farmSummaryList.flatMap(farm => farm.crops.map(crop => crop.split(' ')[0])))).forEach((cropName) => {
+      const row = [cropName];
+      
+      // Fill in farm-specific areas for each crop
+      farmSummaryList.forEach((farm) => {
+        const crop = farm.crops.find(crop => crop.startsWith(cropName));
+        row.push(crop ? crop.split(' - ')[1] : '-');
+      });
+  
+      // Calculate the total for this crop
+      const cropTotal = farmSummaryList.reduce((sum, farm) => {
+        const crop = farm.crops.find(crop => crop.startsWith(cropName));
+        return sum + (crop ? parseFloat(crop.split(' - ')[1].replace(' ha', '')) : 0);
+      }, 0);
+      row.push(`${cropTotal.toFixed(2)} ha`);
+      
+      rows.push(row);
+    });
+    
+    // Add total area row
+    const totalRow = ['Gesamtfläche'];
+    farmSummaryList.forEach((farm) => {
+      const farmTotal = farm.crops.reduce((sum, crop) => sum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0);
+      totalRow.push(`${farmTotal.toFixed(2)} ha`);
+    });
+    totalRow.push(`${farmSummaryList.reduce((sum, farm) => sum + farm.crops.reduce((subSum, crop) => subSum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0), 0).toFixed(2)} ha`);
+    rows.push(totalRow);
+    
+    // Add summary table to PDF
+    pdf.autoTable({
+      head: [headers],
+      body: rows,
+      startY: yPos,
+    });
+    
+    yPos += pdf.lastAutoTable.finalY + 10; // Adjust position for the next section
+    
+    // Add detailed tables for each farm
+    farmSummaryList.forEach((farm) => {
+      pdf.setFontSize(14);
+      pdf.text(`Farm: ${farm.farmName}`, 10, yPos);
+      
+      yPos += 10; // Adjust position for table
+      
+      // Set table headers for the farm
+      const farmHeaders = ['Fruit', 'Field', 'Size'];
+      const farmRows = farm.crops.map(crop => {
+        const [fieldName, area] = crop.split(' - ');
+        const fruit = crop.split(' ')[0]; // Assuming the fruit is the first part of the string
+        return [fruit, fieldName, area];
+      });
+  
+      // Add farm table to PDF
+      pdf.autoTable({
+        head: [farmHeaders],
+        body: farmRows,
+        startY: yPos,
+        margin: { left: 10 },
+      });
+      
+      yPos += pdf.lastAutoTable.finalY + 10; // Adjust position for the next section
+    });
+    
+    // Save the PDF
+    pdf.save('field_info_summary.pdf');
+  };
+  
+  /*
+  const exportToPDF = () => {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    let yPos = 10; // Starting Y position for text
+    
+    // Add a title to the PDF
+    pdf.setFontSize(16);
+    pdf.text('Field Info Summary', 10, yPos);
+    
+    yPos += 10; // Adjust position for summary table
+    
+    // Set table headers for the summary
+    const headers = ['Frucht', ...farmSummaryList.map(farm => farm.farmName), 'Summe'];
+    const rows = [];
+    
+    // Collect table rows (crops by farms and total area)
+    Array.from(new Set(farmSummaryList.flatMap(farm => farm.crops.map(crop => crop.split(' ')[0])))).forEach((cropName) => {
+      const row = [cropName];
+      
+      // Fill in farm-specific areas for each crop
+      farmSummaryList.forEach((farm) => {
+        const crop = farm.crops.find(crop => crop.startsWith(cropName));
+        row.push(crop ? crop.split(' - ')[1] : '-');
+      });
+  
+      // Calculate the total for this crop
+      const cropTotal = farmSummaryList.reduce((sum, farm) => {
+        const crop = farm.crops.find(crop => crop.startsWith(cropName));
+        return sum + (crop ? parseFloat(crop.split(' - ')[1].replace(' ha', '')) : 0);
+      }, 0);
+      row.push(`${cropTotal.toFixed(2)} ha`);
+      
+      rows.push(row);
+    });
+    
+    // Add total area row
+    const totalRow = ['Gesamtfläche'];
+    farmSummaryList.forEach((farm) => {
+      const farmTotal = farm.crops.reduce((sum, crop) => sum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0);
+      totalRow.push(`${farmTotal.toFixed(2)} ha`);
+    });
+    totalRow.push(`${farmSummaryList.reduce((sum, farm) => sum + farm.crops.reduce((subSum, crop) => subSum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0), 0).toFixed(2)} ha`);
+    rows.push(totalRow);
+    
+    // Add summary table to PDF
+    pdf.autoTable({
+      head: [headers],
+      body: rows,
+      startY: yPos,
+    });
+    
+    yPos += pdf.lastAutoTable.finalY + 10; // Adjust position for the next table
+    
+    // Add individual tables for each farm
+    farmSummaryList.forEach((farm) => {
+      pdf.setFontSize(14);
+      pdf.text(`Farm: ${farm.farmName}`, 10, yPos);
+      
+      yPos += 10; // Adjust position for table
+      
+      // Set table headers for the farm
+      const farmHeaders = ['Field', 'Area'];
+      const farmRows = farm.crops.map(crop => {
+        const [fieldName, area] = crop.split(' - ');
+        return [fieldName, area];
+      });
+  
+      // Add farm table to PDF
+      pdf.autoTable({
+        head: [farmHeaders],
+        body: farmRows,
+        startY: yPos,
+      });
+      
+      yPos += pdf.lastAutoTable.finalY + 10; // Adjust position for the next table
+    });
+    
+    // Save the PDF
+    pdf.save('field_info_summary.pdf');
+  };
+
+  /*
+  const exportToPDF = () => {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    let yPos = 10; // Starting Y position for text
+  
+    // Add a title to the PDF
+    pdf.setFontSize(16);
+    pdf.text('Field Info Summary', 10, yPos);
+  
+    yPos += 10; // Adjust position for table
+  
+    // Set table headers
+    const headers = ['Frucht', ...farmSummaryList.map(farm => farm.farmName), 'Summe'];
+    const rows = [];
+  
+    // Collect table rows (crops by farms and total area)
+    Array.from(new Set(farmSummaryList.flatMap(farm => farm.crops.map(crop => crop.split(' ')[0])))).forEach((cropName) => {
+      const row = [cropName];
+  
+      // Fill in farm-specific areas for each crop
+      farmSummaryList.forEach((farm) => {
+        const crop = farm.crops.find(crop => crop.startsWith(cropName));
+        row.push(crop ? crop.split(' - ')[1] : '-');
+      });
+  
+      // Calculate the total for this crop
+      const cropTotal = farmSummaryList.reduce((sum, farm) => {
+        const crop = farm.crops.find(crop => crop.startsWith(cropName));
+        return sum + (crop ? parseFloat(crop.split(' - ')[1].replace(' ha', '')) : 0);
+      }, 0);
+      row.push(`${cropTotal.toFixed(2)} ha`);
+  
+      rows.push(row);
+    });
+  
+    // Add total area row
+    const totalRow = ['Gesamtfläche'];
+    farmSummaryList.forEach((farm) => {
+      const farmTotal = farm.crops.reduce((sum, crop) => sum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0);
+      totalRow.push(`${farmTotal.toFixed(2)} ha`);
+    });
+    totalRow.push(`${farmSummaryList.reduce((sum, farm) => sum + farm.crops.reduce((subSum, crop) => subSum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0), 0).toFixed(2)} ha`);
+    rows.push(totalRow);
+  
+    // Add the summary table to PDF
+    pdf.autoTable({
+      head: [headers],
+      body: rows,
+      startY: yPos,
+    });
+  
+    // Move Y position after the summary table
+    yPos = pdf.lastAutoTable.finalY + 10;
+  
+    // Loop through each farm to create detailed tables below the summary
+    farmSummaryList.forEach((farm) => {
+      // Check if fields exist; if not, set to an empty array
+      const fields = farm.fields || [];
+  
+      if (yPos + 50 > pdf.internal.pageSize.height) {
+        pdf.addPage(); // Add a new page if space is running out
+        yPos = 10;
+      }
+  
+      // Add farm name as a sub-heading
+      pdf.setFontSize(14);
+      pdf.text(`Betrieb: ${farm.farmName}`, 10, yPos);
+      yPos += 10;
+  
+      // Set detailed table headers for the farm
+      const farmTableHeaders = ['Frucht', 'Feld', 'Fläche'];
+      const farmTableRows = [];
+  
+      // Loop through each crop and field to fill rows
+      farm.crops.forEach((crop) => {
+        const [cropName, cropArea] = crop.split(' - ');
+  
+        // Safely access the fields and sort them
+        fields
+          .filter(field => field.crop === cropName) // Only filter if fields exist
+          .sort((a, b) => a.field_name.localeCompare(b.field_name)) // Sort fields alphabetically
+          .forEach(field => {
+            farmTableRows.push([cropName, field.field_name, `${field.field_size} ha`]);
+          });
+      });
+  
+      // Add the detailed farm table to the PDF
+      pdf.autoTable({
+        head: [farmTableHeaders],
+        body: farmTableRows,
+        startY: yPos,
+      });
+  
+      // Move Y position after each farm table
+      yPos = pdf.lastAutoTable.finalY + 10;
+    });
+  
+    // Save the final PDF
+    pdf.save('field_info_summary_and_farm_details.pdf');
+  };
+
+  /*
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+  
+    // Sort the field info by farm_name, crop_name, and field_name
+    const sortedFieldInfoList = [...filteredFieldInfoList].sort((a, b) => {
+      if (a.farm_name !== b.farm_name) return a.farm_name.localeCompare(b.farm_name);
+      if (a.crop_name !== b.crop_name) return a.crop_name.localeCompare(b.crop_name);
+      return a.field_name.localeCompare(b.field_name);
+    });
+  
+    // Create the summary table
+    const tableColumn = ['Betrieb', 'Jahr', 'Frucht', 'Feld', 'Fläche'];
+    const tableRows = [];
+  
+    sortedFieldInfoList.forEach(info => {
+      const infoData = [
+        info.farm_name,
+        info.year,
+        info.crop_name,
+        info.field_name,
+        `${info.field_size} ha`
+      ];
+      tableRows.push(infoData);
+    });
+  
+    // First table with column headers
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 10, // start 10 units from the top
+    });
+  
+    // Add a second table that shows all fields sorted by farm, fruit, and field
+    let currentFarm = null;
+    let currentCrop = null;
+  
+    sortedFieldInfoList.forEach((info, index) => {
+      if (info.farm_name !== currentFarm) {
+        doc.addPage(); // New page for each new farm
+        currentFarm = info.farm_name;
+        currentCrop = null; // Reset crop for the new farm
+  
+        // Add farm name as a heading
+        doc.text(`Betrieb: ${info.farm_name}`, 14, 20);
+  
+        autoTable(doc, {
+          head: [tableColumn],
+          body: [], // Empty body to show the farm first
+          startY: 30,
+        });
+      }
+  
+      if (info.crop_name !== currentCrop) {
+        currentCrop = info.crop_name;
+  
+        // Add crop name as a sub-heading under the farm
+        doc.text(`Frucht: ${info.crop_name}`, 14, doc.lastAutoTable.finalY + 10);
+  
+        autoTable(doc, {
+          head: [tableColumn],
+          body: [], // Empty body to indicate the new crop
+          startY: doc.lastAutoTable.finalY + 20,
+        });
+      }
+  
+      // Add field details under each crop
+      const fieldRow = [
+        info.farm_name,
+        info.year,
+        info.crop_name,
+        info.field_name,
+        `${info.field_size} ha`,
+      ];
+  
+      autoTable(doc, {
+        body: [fieldRow],
+        startY: doc.lastAutoTable.finalY + 10,
+      });
+    });
+  
+    // Save the PDF
+    doc.save('field_info_sorted.pdf');
+  };
+
+  /*
+  const exportToPDF = () => {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    let yPos = 10; // Starting Y position for text
+  
+    // Add a title to the PDF
+    pdf.setFontSize(16);
+    pdf.text('Field Info Summary', 10, yPos);
+  
+    yPos += 10; // Adjust position for table
+  
+    // Set table headers
+    const headers = ['Frucht', ...farmSummaryList.map(farm => farm.farmName), 'Summe'];
+    const rows = [];
+  
+    // Collect table rows (crops by farms and total area)
+    Array.from(new Set(farmSummaryList.flatMap(farm => farm.crops.map(crop => crop.split(' ')[0])))).forEach((cropName) => {
+      const row = [cropName];
+      
+      // Fill in farm-specific areas for each crop
+      farmSummaryList.forEach((farm) => {
+        const crop = farm.crops.find(crop => crop.startsWith(cropName));
+        row.push(crop ? crop.split(' - ')[1] : '-');
+      });
+  
+      // Calculate the total for this crop
+      const cropTotal = farmSummaryList.reduce((sum, farm) => {
+        const crop = farm.crops.find(crop => crop.startsWith(cropName));
+        return sum + (crop ? parseFloat(crop.split(' - ')[1].replace(' ha', '')) : 0);
+      }, 0);
+      row.push(`${cropTotal.toFixed(2)} ha`);
+  
+      rows.push(row);
+    });
+  
+    // Add total area row
+    const totalRow = ['Gesamtfläche'];
+    farmSummaryList.forEach((farm) => {
+      const farmTotal = farm.crops.reduce((sum, crop) => sum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0);
+      totalRow.push(`${farmTotal.toFixed(2)} ha`);
+    });
+    totalRow.push(`${farmSummaryList.reduce((sum, farm) => sum + farm.crops.reduce((subSum, crop) => subSum + parseFloat(crop.split(' - ')[1].replace(' ha', '')), 0), 0).toFixed(2)} ha`);
+    rows.push(totalRow);
+  
+    // Add table to PDF
+    pdf.autoTable({
+      head: [headers],
+      body: rows,
+      startY: yPos,
+    });
+  
+    pdf.save('field_info_summary.pdf');
+  };
+
+  /*
   const exportToPDF = () => {
     const container = document.querySelector('.field-info-table-container'); 
   
@@ -372,6 +778,7 @@ const FieldInfoEditor = ({ fields, crops, onClose, selectStyle, fieldOptions }) 
       console.error('Element not found');
     }
   };
+  */
 
   return (
     <div className="popup">
