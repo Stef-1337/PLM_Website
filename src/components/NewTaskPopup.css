@@ -38,3 +38,30 @@
   justify-content: space-between;
   margin-top: 30px;
 }
+
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 4px;
+  position: relative;
+  font-size: 14px;
+}
+
+.close-button {
+  background-color: transparent;
+  border: none;
+  color: #155724;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  position: absolute;
+  top: 5px;
+  right: 10px;
+}
+
+.close-button:hover {
+  color: #d9534f;
+}

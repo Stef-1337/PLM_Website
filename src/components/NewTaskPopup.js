@@ -3,6 +3,8 @@ import './NewTaskPopup.css';
 
 const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => {
 
+  const [successMessage, setSuccessMessage] = useState('');
+
   const getCurrentDateTime = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -18,7 +20,7 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
     vehicle: '',
     attachment: '',
     description: '',
-    duration: 0, // Duration in seconds
+    duration: 0,
     begin: getCurrentDateTime(),
     end: getCurrentDateTime()
   });
@@ -73,8 +75,12 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
     const { value } = e.target;
     setTaskData(prevData => ({
       ...prevData,
-      duration: durationToSeconds(value) // Convert selected duration to seconds
+      duration: durationToSeconds(value)
     }));
+  };
+
+  const handleCloseMessage = () => {
+    setSuccessMessage('');
   };
 
   const handleSubmit = async (e) => {
@@ -100,7 +106,7 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
           vehicles_id: taskData.vehicle,
           attachments_id: taskData.attachment,
           description: taskData.description,
-          duration: taskData.duration, // Duration in seconds
+          duration: taskData.duration,
           begin: formattedBegin,
           end: formattedEnd,
         }),
@@ -108,8 +114,8 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
 
       if (response.ok) {
         console.log('Task created successfully');
+        setSuccessMessage(`Der Auftrag "${taskData.description}" wurde für "${fields.find(f => Number(f.id) === Number(taskData.field))?.name}" hinzugefügt.`);
         await onAddTask();
-        // Do not close the popup here
       } else {
         console.error('Error creating task');
       }
@@ -171,6 +177,12 @@ const NewTaskPopup = ({ onClose, onAddTask, fields, vehicles, attachments }) => 
           <button type="submit">Auftrag erstellen</button>
           <button type="button" onClick={onClose}>Abbruch</button>
         </div>
+        {successMessage && (
+          <div className="success-message">
+            {successMessage}
+            <button className="close-button" onClick={handleCloseMessage}>X</button>
+          </div>
+        )}
       </form>
     </div>
   );
